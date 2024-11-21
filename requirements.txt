@@ -1,0 +1,9 @@
+localstack
+awscli
+boto3
+wavinfo
+fastapi[all]
+black
+isort
+flake8
+tinydb
