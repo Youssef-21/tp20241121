@@ -32,6 +32,7 @@ L'environnement de travail a déjà des outils installés :
 Virtualenv (venv) permet de configurer des environnements Python isolés. Créez un virtualenv et installez les dépendances Python du projet :
 
 ```shell
+python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
