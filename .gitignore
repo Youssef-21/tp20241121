@@ -3,4 +3,4 @@ __pycache__
 code/settings.py
 *.DS_Store
 env.sh
-*.json
+db.json
