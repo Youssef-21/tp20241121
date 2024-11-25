@@ -1,5 +1,5 @@
 # TP WORKFLOW INGEST DE MÉDIA
-
+Youssef Salamat
 ## I Introduction
 
 Dans ce TP vous allez créer un **Workflow d'ingest** des fichiers wav.
@@ -127,6 +127,9 @@ Le modèle de données fourni par wavinfo :
 S3 (Simple Storage Service) stocke les fichiers sous forme d'objets dans un compartiment appelé bucket.
 
 **Complétez la ligne de commande et créez les bucket S3 nommés `ingest` et `asset` avec s3api:**
+awslocal s3api create-bucket --bucket ingest
+awslocal s3api create-bucket --bucket asset
+
 
 ```shell
 awslocal s3api ...
