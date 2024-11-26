@@ -1,5 +1,5 @@
 # TP WORKFLOW INGEST DE MÉDIA
-
+Youssef Salamat
 ## I Introduction
 
 Dans ce TP vous allez créer un **Workflow d'ingest** des fichiers wav.
@@ -129,15 +129,23 @@ S3 (Simple Storage Service) stocke les fichiers sous forme d'objets dans un comp
 **Complétez la ligne de commande et créez les bucket S3 nommés `ingest` et `asset` avec s3api:**
 
 ```shell
-awslocal s3api ...
+awslocal s3api create-bucket --bucket ingest
+awslocal s3api create-bucket --bucket asset
+
+
 ```
 
 **Que retourne l'API ?**  
+Un message décrivant le résultat : échec ou succès
+status : indiquant si l'opération fini par un succès ou une error
+error et details : fournissant des informations en cas d'échec
 
 **Quelle sont les commandes AWS S3 pour :**
-- Copier un fichier en local vers le bucket S3 ingest
-- Listez des fichiers sur le bucket S3 ingest
-- Supprimer un fichier sur le bucket S3 ingest
+- Copier un fichier en local vers le bucket S3 ingest : aws s3 cp chemin/local/fichier.txt s3://ingest/
+
+- Listez des fichiers sur le bucket S3 ingest : aws s3 ls s3://ingest/
+
+- Supprimer un fichier sur le bucket S3 ingest : aws s3 rm s3://ingest/fichier.txt
 
 Des échantillons sont disponibles dans le dossier media/audio_(1-5).wav.
 
@@ -148,17 +156,23 @@ SQS est un service d'échange de messages.
 **Complétez la ligne de commande et créez une nouvelle file SQS nommée `s3-ingest-messages` avec les attributs `file://configs/sqs-retention-config.json`:**
 
 ```shell
-awslocal sqs create-queue ...
+awslocal sqs create-queue --queue-name s3-ingest-messages --attributes file://configs/sqs-retention-config.json
+
 ```  
 
 **Quel est le retour de cette commande ?**  
+{
+    "QueueUrl": "http://localhost:4566/000000000000/s3-ingest-messages"
+}
+
 
 Il faut configurer le bucket pour qu’il notifie la présence d’un nouveau fichier par cette file SQS.
 
 **Complétez la ligne de commande et appliquez la configuration sur le bucket S3 `ingest` avec la configuration `file://configs/s3-notif-config.json`:**
 
 ```shell
-awslocal s3api put-bucket-notification-configuration ...
+awslocal s3api put-bucket-notification-configuration --bucket ingest --notification-configuration file://configs/s3-notif-config.json
+
 ```
 
 ## IV Workflow d'Ingest
@@ -169,8 +183,9 @@ Créez le fichier `code/settings.py` et complétez les valeurs manquantes en ava
 ```python
 STACK_URL = "http://localhost:4566"
 ASSET_URL = "http://localhost:8000"
-SQS_INGEST = ""
-SQS_DELETE = ""
+SQS_INGEST = "awslocal sqs create-queue --queue-name s3-ingest-messages"
+SQS_DELETE = "awslocal sqs create-queue --queue-name s3-delete-messages"
+
 ```
 
 **Backend API assets**
@@ -186,7 +201,10 @@ uvicorn code.http_assets:app --reload
 Accédez à l'API REST par le navigateur web.
 
 **Quelles sont les routes proposées par l'API du service ?**
-
+GET /assets : Liste des assets disponibles.
+POST /asset : Ajoute un nouvel asset.
+GET /asset/{file} : Récupèrer les informations d'un asset spécifique.
+DELETE /asset/{file} : Supprimer un asset en envoyant une requête de suppression à SQS
 ### Analyse de fichiers
 
 Le worker d'analyse `code/worker_probe.py` détecte un message SQS sur la file `s3-ingest-messages`. Implémentez la logique métier du worker :
@@ -217,19 +235,28 @@ python code/worker_probe.py
 Ajoutez tous les fichiers du répertoire `media` dans le bucket `s3://ingest/` pour déclencher des workflows.
 
 **A la fin des workflows, listez les fichiers valides dans le bucket `assets` avec une commande awslocal s3.**
+awslocal s3 ls s3://asset/ --recursive
 
 **Récupérez sur l'API du service HTTP assets toutes les analyses enregistrées.**
+curl http://localhost:8000/assets
+
 
 **Quels fichiers sont invalides et pourquoi sont-ils invalides ?**
+les fichiers valides sont audio_1 / audio_3 / audio_5 
+Les fichiers sont invalides en raison d'une fréquence d'échantillonage inférieure à 48kHz, une profondeur de bits inférieure à 24bits.
 
 ## Suppression de fichiers
 
 Créez une file SQS `s3-delete-messages` et compléter le fichier settings.py avec la valeur de `SQS_DELETE`.
 
+
 **Complétez la ligne de commande et créez une nouvelle file SQS nommée `s3-delete-messages` avec les attributs `file://configs/sqs-retention-config.json`:**
 
+
 ```shell
-awslocal sqs create-queue ...
+
+awslocal sqs create-queue --queue-name s3-delete-messages --attributes file://configs/sqs-retention-config.json
+
 ```
 
 Complétez le code du service HTTP assets `code/http_assets.py` pour envoyer un message de suppression sur la route `DELETE` (PART IV F).
@@ -258,3 +285,5 @@ python code/worker_delete.py
 Supprimez un des assets enregistrés sur le service assets.
 
   **Quelle route est utilisée pour supprimer un asset sur le service HTTP ? Reportez les logs du worker et du service lors d'une suppression.**
+  la route utilisée est : DELETE /asset/<file>
+
